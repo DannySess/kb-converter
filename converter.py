@@ -186,13 +186,29 @@ def already_converted(input_path: Path) -> bool:
 
 def convert_pdf(path: Path) -> str:
     try:
-        from marker.converters.pdf import PdfConverter
-        from marker.models import create_model_dict
-        from marker.output import text_from_rendered
-        converter = PdfConverter(artifact_dict=create_model_dict())
-        rendered = converter(str(path))
-        text, _, _ = text_from_rendered(rendered)
-        return text
+        import pdfplumber
+        md = f"# {path.stem}\n\n"
+        with pdfplumber.open(path) as pdf:
+            for i, page in enumerate(pdf.pages, 1):
+                # Extract tables first
+                tables = page.extract_tables()
+                table_bboxes = [t.bbox for t in page.find_tables()] if tables else []
+                if tables:
+                    for table in tables:
+                        if not table:
+                            continue
+                        header = [str(c) if c is not None else "" for c in table[0]]
+                        md += "| " + " | ".join(header) + " |\n"
+                        md += "| " + " | ".join(["---"] * len(header)) + " |\n"
+                        for row in table[1:]:
+                            cells = [str(c) if c is not None else "" for c in row]
+                            md += "| " + " | ".join(cells) + " |\n"
+                        md += "\n"
+                # Extract text outside tables
+                text = page.extract_text()
+                if text:
+                    md += text + "\n\n"
+        return md
     except Exception as e:
         log.error(f"PDF conversion failed for {path.name}: {e}")
         return f"# {path.stem}\n\n*Conversion failed: {e}*\n"
