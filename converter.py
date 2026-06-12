@@ -213,9 +213,10 @@ def convert_pdf(path: Path) -> str:
                             md += "| " + " | ".join(cells) + " |\n"
                         md += "\n"
                 # Extract text outside tables
-                text = page.extract_text()
-                if text:
-                    md += fix_spacing(text) + "\n\n"
+                if not tables:
+                    text = page.extract_text()
+                    if text:
+                        md += fix_spacing(text) + "\n\n"
         return md
     except Exception as e:
         log.error(f"PDF conversion failed for {path.name}: {e}")
