@@ -184,6 +184,14 @@ def already_converted(input_path: Path) -> bool:
         return False
     return out.stat().st_mtime >= input_path.stat().st_mtime
 
+def fix_spacing(text: str) -> str:
+    import re
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+    text = re.sub(r"([a-zA-Z])(\d)", r"\1 \2", text)
+    text = re.sub(r"(\d)([a-zA-Z])", r"\1 \2", text)
+    text = re.sub(r"([.,;:])([A-Za-z])", r"\1 \2", text)
+    return text
+
 def convert_pdf(path: Path) -> str:
     try:
         import pdfplumber
@@ -207,7 +215,7 @@ def convert_pdf(path: Path) -> str:
                 # Extract text outside tables
                 text = page.extract_text()
                 if text:
-                    md += text + "\n\n"
+                    md += fix_spacing(text) + "\n\n"
         return md
     except Exception as e:
         log.error(f"PDF conversion failed for {path.name}: {e}")
