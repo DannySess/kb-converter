@@ -1,0 +1,11 @@
+services:
+  bms-converter:
+    image: bms-converter:latest
+    container_name: bms-converter
+    restart: unless-stopped
+    volumes:
+      - /mnt/nas/bms_docs/bms_kb:/input:ro
+      - /mnt/nas/bms_docs/bms_kb_md:/output:rw
+    environment:
+      WATCH_DIR: "/input"
+      OUTPUT_DIR: "/output"
