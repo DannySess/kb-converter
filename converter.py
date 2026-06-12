@@ -20,7 +20,7 @@ OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", "/output"))
 UI_PORT    = int(os.environ.get("UI_PORT", 5000))
 
 CODE_EXTS = {".py", ".js", ".aut", ".tgml", ".xml"}
-SKIP_EXTS = {".xbk", ".bak", ".tmp", ".log"}
+SKIP_EXTS = {".xbk", ".bak", ".tmp", ".log", ".dat", ".db", ".sqlite", ".idx", ".bin"}
 SKIP_DIRS = {"OLD", "old", "archive", "8_BACKUPS", "Temp", "temp"}
 
 # ── State ─────────────────────────────────────────────────────────────────────
