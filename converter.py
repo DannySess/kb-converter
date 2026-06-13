@@ -446,7 +446,9 @@ def broadcast_state():
 
 def output_path(input_path: Path) -> Path:
     rel = input_path.relative_to(WATCH_DIR)
-    return OUTPUT_DIR / rel.with_suffix(".md")
+    if rel.suffix.lower() == ".md":
+        return OUTPUT_DIR / rel
+    return OUTPUT_DIR / rel.parent / (rel.name + ".md")
 
 
 def already_converted(input_path: Path) -> bool:
