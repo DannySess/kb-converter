@@ -24,7 +24,7 @@ UI_PORT     = int(os.environ.get("UI_PORT", 5000))
 
 CODE_EXTS = {".py", ".js", ".aut", ".tgml", ".xml"}
 SKIP_EXTS = {".xbk", ".bak", ".tmp", ".log", ".dat", ".db", ".sqlite", ".idx", ".bin"}
-SKIP_DIRS = {"OLD", "old", "archive", "8_BACKUPS", "Temp", "temp"}
+SKIP_DIRS = {"OLD", "old", "Old", "archive", "8_BACKUPS", "Temp", "temp", "V1", "V2", "V3", "V4", "V5", "Update", "WEBPAGES"}
 
 # ── State ─────────────────────────────────────────────────────────────────────
 state = {"paused": False, "converted": 0, "skipped": 0, "failed": 0, "current": None, "logs": []}
@@ -206,7 +206,7 @@ HTML = """
       const r = await fetch('/api/settings');
       const d = await r.json();
       document.getElementById('owui-url').value = d.open_webui_url || '';
-      document.getElementById('owui-token').value = d.open_webui_token ? '••••••••' : '';
+      document.getElementById('owui-token').value = d.open_webui_token || '';
       renderMappings(d.mappings || {}, d.unmapped || []);
     }
 
@@ -244,7 +244,7 @@ HTML = """
     async function saveConnection() {
       const url = document.getElementById('owui-url').value;
       const token = document.getElementById('owui-token').value;
-      if (token === '••••••••') {
+      if (!token || token === '••••••••') {
         // Don't overwrite token if it wasn't changed
         const r = await fetch('/api/settings/connection', {
           method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -361,7 +361,7 @@ def api_settings():
     unmapped = [f for f in folders if f not in mapped]
     return jsonify({
         "open_webui_url": cfg.get("open_webui_url", ""),
-        "open_webui_token": "set" if cfg.get("open_webui_token") else "",
+        "open_webui_token": cfg.get("open_webui_token", ""),
         "mappings": cfg.get("mappings", {}),
         "unmapped": unmapped
     })
@@ -444,9 +444,6 @@ def broadcast_state():
         socketio.emit("state", dict(state))
 
 
-MAX_MD_SIZE = 400_000  # 400KB max per output file
-
-
 def output_path(input_path: Path) -> Path:
     rel = input_path.relative_to(WATCH_DIR)
     if rel.suffix.lower() == ".md":
@@ -454,96 +451,11 @@ def output_path(input_path: Path) -> Path:
     return OUTPUT_DIR / rel.parent / (rel.name + ".md")
 
 
-def resolve_output_path(input_path: Path):
-    """
-    Returns (output_path, should_skip).
-    - No conflict: normal path, False
-    - Same name, same size (true duplicate): path, True (skip)
-    - Same name, different size: prefixed path, False
-    """
-    out = output_path(input_path)
-    out_name = out.name
-
-    existing = [p for p in OUTPUT_DIR.rglob(out_name) if p.resolve() != out.resolve()]
-    if not existing:
-        return out, False
-
-    src_size = input_path.stat().st_size
-    for conflict in existing:
-        try:
-            conflict_size = conflict.stat().st_size
-            if abs(conflict_size - src_size) / max(src_size, 1) < 0.1:
-                log.info(f"  ⏭  True duplicate (same size), skipping: {input_path.name}")
-                return out, True
-        except Exception:
-            pass
-
-    parent_name = input_path.parent.name.replace(" ", "_")
-    prefixed_out = out.parent / f"{parent_name}_{out_name}"
-    log.info(f"  📝 Name conflict, prefixing: {parent_name}_{out_name}")
-    return prefixed_out, False
-
-
 def already_converted(input_path: Path) -> bool:
-    out, skip = resolve_output_path(input_path)
-    if skip:
-        return True
-    part1 = out.parent / (out.stem + "_part1.md")
-    if part1.exists():
-        return part1.stat().st_mtime >= input_path.stat().st_mtime
+    out = output_path(input_path)
     if not out.exists():
         return False
     return out.stat().st_mtime >= input_path.stat().st_mtime
-
-
-def save_content(content: str, out: Path, path: Path) -> bool:
-    """Save content, splitting into parts if too large."""
-    out.parent.mkdir(parents=True, exist_ok=True)
-    encoded = content.encode("utf-8")
-
-    if len(encoded) <= MAX_MD_SIZE:
-        try:
-            out.write_text(content, encoding="utf-8")
-            log.info(f"  ✅ Saved: {out.relative_to(OUTPUT_DIR)}")
-            return True
-        except Exception as e:
-            log.error(f"  ❌ Write failed: {e}")
-            return False
-
-    # Split into parts by paragraphs
-    log.info(f"  ✂️  Large file ({len(encoded)//1024}KB), splitting...")
-    paragraphs = content.split("\n\n")
-    parts = []
-    current = []
-    current_size = 0
-    stem = out.stem
-
-    for para in paragraphs:
-        para_size = len(para.encode("utf-8")) + 2
-        if current_size + para_size > MAX_MD_SIZE and current:
-            parts.append("\n\n".join(current))
-            current = [para]
-            current_size = para_size
-        else:
-            current.append(para)
-            current_size += para_size
-    if current:
-        parts.append("\n\n".join(current))
-
-    success = True
-    for i, part in enumerate(parts, 1):
-        part_path = out.parent / f"{stem}_part{i}.md"
-        header = f"# {path.stem} (Part {i} of {len(parts)})\n\n"
-        try:
-            part_path.write_text(header + part, encoding="utf-8")
-            log.info(f"  ✅ Saved: {part_path.relative_to(OUTPUT_DIR)}")
-        except Exception as e:
-            log.error(f"  ❌ Write failed for part {i}: {e}")
-            success = False
-
-    with state_lock:
-        state["converted"] += len(parts) - 1  # Extra credit for extra parts
-    return success
 
 
 def fix_spacing(text: str) -> str:
@@ -690,21 +602,19 @@ def convert_file(path: Path) -> bool:
     else:
         return False
 
-    out, skip = resolve_output_path(path)
-    if skip:
-        with state_lock:
-            state["skipped"] += 1
-            state["current"] = None
-        broadcast_state()
-        return False
+    out = output_path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
 
-    if save_content(content, out, path):
+    try:
+        out.write_text(content, encoding="utf-8")
+        log.info(f"  ✅ Saved: {out.relative_to(OUTPUT_DIR)}")
         with state_lock:
             state["converted"] += 1
             state["current"] = None
         broadcast_state()
         return True
-    else:
+    except Exception as e:
+        log.error(f"  ❌ Write failed: {e}")
         with state_lock:
             state["failed"] += 1
             state["current"] = None
