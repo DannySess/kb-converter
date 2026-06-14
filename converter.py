@@ -23,8 +23,8 @@ CONFIG_PATH = Path(os.environ.get("CONFIG_PATH", "/config/kb_config.json"))
 UI_PORT     = int(os.environ.get("UI_PORT", 5000))
 
 CODE_EXTS = {".py", ".js", ".aut", ".tgml", ".xml"}
-SKIP_EXTS = {".xbk", ".bak", ".tmp", ".log", ".dat", ".db", ".sqlite", ".idx", ".bin", ".lng", ".war", ".air", ".jar", ".apk", ".zip", ".hex", ".gif", ".png", ".jpg", ".jpeg", ".ico", ".svg"}
-SKIP_DIRS = {"10_LOGS", "LOGS", "logs","OLD", "old", "archive", "8_BACKUPS", "Temp", "temp"}
+SKIP_EXTS = {".xbk", ".bak", ".tmp", ".log", ".dat", ".db", ".sqlite", ".idx", ".bin"}
+SKIP_DIRS = {"OLD", "old", "archive", "8_BACKUPS", "Temp", "temp"}
 
 # ── State ─────────────────────────────────────────────────────────────────────
 state = {"paused": False, "converted": 0, "skipped": 0, "failed": 0, "current": None, "logs": []}
@@ -57,7 +57,7 @@ HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-  <title>BMS Converter</title>
+  <title>KB Converter</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -101,7 +101,7 @@ HTML = """
   </style>
 </head>
 <body>
-  <h1>⚙️ BMS Converter</h1>
+  <h1>⚙️ KB Converter</h1>
   
   <div class="tabs">
     <button class="tab active" onclick="showTab('converter')">📊 Converter</button>
