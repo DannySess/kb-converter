@@ -23,8 +23,8 @@ CONFIG_PATH = Path(os.environ.get("CONFIG_PATH", "/config/kb_config.json"))
 UI_PORT     = int(os.environ.get("UI_PORT", 5000))
 
 CODE_EXTS = {".py", ".js", ".aut", ".tgml", ".xml"}
-SKIP_EXTS = {".xbk", ".bak", ".tmp", ".log", ".dat", ".db", ".sqlite", ".idx", ".bin", ".txt", ".lng", ".war", ".air", ".jar", ".apk", ".zip", ".hex", ".gif", ".png", ".jpg", ".jpeg", ".ico", ".svg"}
-SKIP_DIRS = {"OLD", "old", "archive", "8_BACKUPS", "Temp", "temp"}
+SKIP_EXTS = {".xbk", ".bak", ".tmp", ".log", ".dat", ".db", ".sqlite", ".idx", ".bin", ".lng", ".war", ".air", ".jar", ".apk", ".zip", ".hex", ".gif", ".png", ".jpg", ".jpeg", ".ico", ".svg"}
+SKIP_DIRS = {"10_LOGS", "LOGS", "logs","OLD", "old", "archive", "8_BACKUPS", "Temp", "temp"}
 
 # ── State ─────────────────────────────────────────────────────────────────────
 state = {"paused": False, "converted": 0, "skipped": 0, "failed": 0, "current": None, "logs": []}
